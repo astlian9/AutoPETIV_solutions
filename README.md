@@ -141,6 +141,6 @@ CUDA_VISIBLE_DEVICES="0" accelerate launch --num_processes 1 --main_process_port
 
 ## Acknowledgements
 
-- We thank the organizers of the MICCAI24 AMOS-MM challenge for their efforts.
-- This codebase builds upon the [M3D repository](https://github.com/BAAI-DCAI/M3D), and we gratefully acknowledge its authors.
+- We thank the organizers of the MICCAI25 AutoPET challenge for their efforts.
+- This codebase builds upon the [nnUNet repository](https://github.com/MIC-DKFZ/nnUNet/tree/master), and we gratefully acknowledge its authors.
 
