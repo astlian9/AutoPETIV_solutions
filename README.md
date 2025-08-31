@@ -1,4 +1,4 @@
-# AMOS-MM-Solution
+# AutoPET-IV-Solution
 
 This repository contains our solution for the [MICCAI25 AUTOPET-IV challenge](https://autopet-iv.grand-challenge.org).
 
@@ -14,20 +14,21 @@ This repository contains our solution for the [MICCAI25 AUTOPET-IV challenge](ht
 1. Create a Python (or conda) virtual environment:
 
     ```bash
-    python -m venv mllm
-    source mllm/bin/activate
+    python -m venv autopet
+    source autopet/bin/activate
     ```
 
 2. Clone the repository:
 
     ```bash
-    git clone https://github.com/bowang-lab/AMOS-MM-Solution.git
-    cd AMOS-MM-Solution
+    gh repo clone astlian9/AutoPETIV_solutions
+    cd AutoPETIV_solutions
     ```
 
 3. Install dependencies:
 
     ```bash
+   cd nnunet-baseline
     pip install -r requirements.txt
     ```
 
@@ -41,7 +42,10 @@ To replicate or expand upon our experiments, download the AMOS-MM dataset from [
 
 ## Data Preparation
 
-The dataset requires a JSON file structured similarly to `Data/dataset.json`. To generate it, run the following command:
+PET and CT images
+
+Human clicks
+The dataset requires converting the JSON file to a heatmap saved as .nii.gz file. To generate it, run the following command:
 
 ```bash
 python prepare_data.py \
@@ -105,35 +109,6 @@ PYTHONPATH=. accelerate launch --num_processes 1 --main_process_port 29500 LaMed
 
 ---
 
-### Visual Question Answering (VQA)
-
-To fine-tune the model for VQA, change the `--task` argument to `vqa`. Additional arguments include:
-- `only_letter`: to restrict answers to single letters.
-- `with_reason`: to include reasoning in answers.
-
----
-
-## Optional: Training the Triplet Model
-
-For Binary-based Questioning (BQ), first prepare triplets:
-
-```bash
-python scripts/triplet_extraction.py \
-  --json_path <PATH_TO_DATASET_JSON> \
-  --openai_key <OPEN_AI_KEY>
-```
-
-- You can modify the model used for triplet extraction inside the script.
-- The triplet files will be named to align with the report files for seamless training.
-
-To train the triplet model, use the same training command as above, adding:
-
-```
---triplet True
-```
-
----
-
 ## Inference
 
 ### MRG Inference
@@ -160,35 +135,9 @@ CUDA_VISIBLE_DEVICES="0" accelerate launch --num_processes 1 --main_process_port
 
 ---
 
-### VQA Inference
+## Wrap up to Docker
 
-Run VQA inference with:
 
-```bash
-CUDA_VISIBLE_DEVICES="0" accelerate launch --num_processes 1 --main_process_port 29500 infer_vqa.py \
-  --model_name_or_path <PATH_TO_TRAINED_MODEL> \
-  --json_path <PATH_TO_DATA_JSON> \
-  --model_max_length 512 \
-  --proj_out_num 256
-```
-
-- The optional `--with_acc` argument computes VQA accuracy if ground truth answers are available in the competition format.
-
----
-
-## Editing the Knowledge Base for NN and BQ
-
-Our paper introduces two report augmentation methods:
-- **Naive Normality (NN)**
-- **Binary-based Questioning (BQ)**
-
-Both methods rely on a pre-defined knowledge base specific to AMOS-MM. To customize this for other datasets, edit the mappings in:
-
-```
-utils/postprocessor.py
-```
-
----
 
 ## Acknowledgements
 
