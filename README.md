@@ -102,13 +102,13 @@ PYTHONPATH=. accelerate launch --num_processes 1 --main_process_port 29500 LaMed
 
 - The `json_path` should point to the JSON file prepared earlier.
 - Set `cache_dir` and `pretrain_vision_model` appropriately.
-- The vision model we used is the 3D ViT from [M3D](https://github.com/BAAI-DCAI/M3D).
-- Additional arguments:
+-  Additional arguments:
   - `zoom_in`: uses organ segmentation masks for region cropping.
   - `prompt`: controls the prompt format (e.g. `"simple"` in `LaMed/src/dataset/prompts.py`).
 
 ---
-
+## Model weight
+Model weight is release by using [Google Drive](https://drive.google.com/drive/folders/1kqSx4cYmDMgVUs2DQMDiQcw9j8rTXSxJ?usp=share_link)
 ## Inference
 
 ### MRG Inference
