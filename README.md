@@ -36,107 +36,97 @@ This repository contains our solution for the [MICCAI25 AUTOPET-IV challenge](ht
 
 ## Dataset Download
 
-To replicate or expand upon our experiments, download the AMOS-MM dataset from [here](https://era-ai-biomed.github.io/amos/dataset.html#download). Once downloaded, you can proceed with dataset preparation.
+To replicate or expand upon our experiments, download the AutoPET-IV dataset from [here](https://autopet-iv.grand-challenge.org/dataset/). Once downloaded, you can proceed with dataset preparation.
 
 ---
 
 ## Data Preparation
 
-PET and CT images
+### PET and CT images
 
-Human clicks
-The dataset requires converting the JSON file to a heatmap saved as .nii.gz file. To generate it, run the following command:
+PET and CT images are processed using nnUNet default preprocessing methods. To generate preprocessed dataset, run
 
 ```bash
-python prepare_data.py \
-  --report_json <PATH_TO_report_generation_train_val.json> \
-  --vqa_json <PATH_TO_vqa_train_val.json> \
-  --output <PATH_TO_OUTPUT_DIR> \
-  --train_src <PATH_TO_imagesTr> \
-  --val_src <PATH_TO_imagesVa>
+nnUNetv2_extract_fingerprint -d 140
+nnUNetv2_plan_experiment -d 140
+nnUNetv2_plan_experiment -d 140 -pl ResEncUnetPlanner
+nnUNetv2_preprocess -d 221 -c 3d_fullres
+```
+
+### Human clicks
+The dataset requires converting the JSON file to a heatmap saved as .nii.gz file. Change the corresponding file path in nnunet-train/process_click.py.  To generate it, run the following command:
+
+```bash
+python nnUnet_train/process_click.py
 ```
 
 ---
 
 ## Training
 
-### Medical Report Generation (MRG)
+### Modify training plan to enable res_encoder
 
-Once data preparation is complete, train the LLaMA 3.1 model for report generation using:
+Modify the generated plans.json to allow res_encoder:
+```bash
+  "3d_fullres_resenc": {
+            "inherits_from": "3d_fullres",
+            "network_arch_class_name": "ResidualEncoderUNet",
+            "n_conv_per_stage_encoder": [
+                1,
+                3,
+                4,
+                6,
+                6,
+                6
+            ],
+            "n_conv_per_stage_decoder": [
+                1,
+                1,
+                1,
+                1,
+                1
+            ]
+        },
+"3d_fullres_resenc_bs240": {
+            "inherits_from": "3d_fullres_resenc",
+            "batch_size": 240
+            },
+```
+### Run training
+
+Once dataset plan is complete, train the nnUNetv2 model using:
 
 ```bash
-PYTHONPATH=. accelerate launch --num_processes 1 --main_process_port 29500 LaMed/src/train/amos_train.py \
-    --version v0 \
-    --model_name_or_path meta-llama/Meta-Llama-3.1-8B-Instruct \
-    --cache_dir <WHERE_MODEL_WILL_BE_SAVED> \
-    --model_type llama \
-    --freeze_llm True \
-    --vision_tower vit3d \
-    --pretrain_vision_model <PATH_TO_PRETRAINED_VISION_MODEL> \
-    --bf16 True \
-    --output_dir <WHERE_TO_SAVE_MODEL> \
-    --num_train_epochs 100 \
-    --per_device_train_batch_size 2 \
-    --evaluation_strategy "no" \
-    --do_eval False \
-    --eval_accumulation_steps 1 \
-    --save_strategy "steps" \
-    --save_steps 2000 \
-    --save_total_limit 1 \
-    --learning_rate 5e-5 \
-    --weight_decay 0. \
-    --warmup_ratio 0.03 \
-    --lr_scheduler_type "cosine" \
-    --logging_steps 0.001 \
-    --gradient_checkpointing False \
-    --dataloader_pin_memory True \
-    --dataloader_num_workers 4 \
-    --report_to none \
-    --prompt "simple" \
-    --task mrg \
-    --json_path <PATH_TO_DATASET_JSON> \
-    --image_size "32, 256, 256" \
-    --with_template True \
-    --model_max_length 768
+nnUNet_compile=T nnUNet_n_proc_DA=28 nnUNetv2_train 140 3d_fullres_resenc_bs240 0 -num_gpus 8
 ```
 
-- The `json_path` should point to the JSON file prepared earlier.
-- Set `cache_dir` and `pretrain_vision_model` appropriately.
--  Additional arguments:
-  - `zoom_in`: uses organ segmentation masks for region cropping.
-  - `prompt`: controls the prompt format (e.g. `"simple"` in `LaMed/src/dataset/prompts.py`).
+- The `nnUNet_n_proc_DA` is the number of processes of Dataloader, change it if your RAM is not enough.
+- The `3d_fullres_resenc_bs240` is the name of training plan, change it if necessary.
+- The `n-num_gpus` is the number of gpus.
 
 ---
 ## Model weight
-Model weight is release by using [Google Drive](https://drive.google.com/drive/folders/1kqSx4cYmDMgVUs2DQMDiQcw9j8rTXSxJ?usp=share_link)
+Model weight is release by using [Google Drive.](https://drive.google.com/drive/folders/1kqSx4cYmDMgVUs2DQMDiQcw9j8rTXSxJ?usp=share_link)
+Download the weigh and copy it to nnunet-baseline/nnUnet_results
 ## Inference
 
-### MRG Inference
+### Inference
 
-Run inference for medical report generation:
+Run inference for tumor segmentation:
 
 ```bash
-CUDA_VISIBLE_DEVICES="0" accelerate launch --num_processes 1 --main_process_port 29500 infer.py \
-  --model_name_or_path <PATH_TO_TRAINED_MODEL> \
-  --json_path <PATH_TO_DATA_JSON> \
-  --model_max_length 768 \
-  --prompt "simple" \
-  --post_process "normality" "bq" \
-  --triplet_model_path <PATH_TO_TRAINED_TRIPLET_MODEL> \
-  --proj_out_num 256
+nnUNetv2_predict -i INPUT -o OUTPUT1 -d 140 -c 3d_fullres_resenc_bs240 -f 0 -step_size 0.6 --save_probabilities
 ```
 
-**Note:**  
-- If you did not train a triplet model, omit the `"bq"` argument and `--triplet_model_path`.
-- The `post_process` argument enables:
-  - Knowledge-based normality inference.
-  - Focused questioning based on specific findings.
-- The knowledge base is defined in `utils/postprocessor.py`. Adapt it for different datasets.
 
----
 
 ## Wrap up to Docker
-
+To submit, the model needs to be transfered to Docker. Run:
+```bash
+cd nnunet-baseline
+bash build.sh
+bash export.sh
+```
 
 
 ## Acknowledgements
