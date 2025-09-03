@@ -1,7 +1,7 @@
 # AutoPET-IV-Solution
 
 This repository contains our solution for the [MICCAI25 AUTOPET-IV challenge](https://autopet-iv.grand-challenge.org).
-
+Please check Solutions_AutoPETiV.pdf for model details.
 ---
 
 ## Installation
